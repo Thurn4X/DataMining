@@ -6,7 +6,7 @@ import numpy as np
 
 
 # Chemin vers le dossier d'images et le fichier de métadonnées
-images_path = 'images/images'
+images_path = 'images/unsplash-images-collection'
 metadata_file = 'image_metadata.json'
 metadata = []
 

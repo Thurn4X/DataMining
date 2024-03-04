@@ -22,8 +22,20 @@ tags_df = pd.DataFrame(tags_encoded, columns=mlb.classes_)
 format_df = pd.get_dummies(dataframe['format'], prefix='format')
 orientation_df = pd.get_dummies(dataframe['orientation'], prefix='orientation')
 
-# Concaténer les caractéristiques pour l'ensemble du dataset
-all_final_df = pd.concat([tags_df, format_df, orientation_df, dataframe[['aire_image']]], axis=1)
+
+# Exemple de création de colonnes pour les composantes RGB de la couleur dominante
+dataframe['dominant_color_r'] = dataframe['couleur_dominante'].apply(lambda x: x[0] if isinstance(x, list) else 0)
+dataframe['dominant_color_g'] = dataframe['couleur_dominante'].apply(lambda x: x[1] if isinstance(x, list) else 0)
+dataframe['dominant_color_b'] = dataframe['couleur_dominante'].apply(lambda x: x[2] if isinstance(x, list) else 0)
+
+# Ajouter les colonnes de couleur dominante au DataFrame final
+all_final_df = pd.concat([
+    tags_df,
+    format_df,
+    orientation_df,
+    dataframe[['aire_image', 'dominant_color_r', 'dominant_color_g', 'dominant_color_b']]
+], axis=1)
+
 
 
 # Séparer les images évaluées et non évaluées
@@ -106,6 +118,16 @@ predictions_tree = decision_tree.predict(X_test)
 # Trouver les indices des images prédites comme aimées ("yes")
 indices_liked = np.where(predictions_tree == 1)[0]
 
+# Noms des caractéristiques
+feature_names = all_final_df.columns
+
+# Afficher l'importance avec les noms des caractéristiques
+importances = decision_tree.feature_importances_
+importances_with_names = zip(feature_names, importances)
+sorted_importances = sorted(importances_with_names, key=lambda x: x[1], reverse=True)
+
+for name, importance in sorted_importances:
+    print(f"{name}: {importance}")
 
 top_n = 10  # Nombre d'images recommandées
 recommended_indices = indices_liked[:top_n]
@@ -138,7 +160,7 @@ img_label = tk.Label(root)
 img_label.pack()
 
 # Définir le dossier contenant les images et les noms des images recommandées
-image_folder = 'images/images'
+image_folder = 'images/unsplash-images-collection'
 recommended_images = recommended_images_tree  # Supposons que ceci est la liste des noms d'images recommandées
 
 # Afficher chaque image recommandée
