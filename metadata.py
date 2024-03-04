@@ -5,13 +5,6 @@ from sklearn.cluster import MiniBatchKMeans
 import numpy as np
 
 
-# Chemin vers le dossier d'images et le fichier de métadonnées
-images_path = 'images/unsplash-images-collection'
-metadata_file = 'image_metadata.json'
-metadata = []
-
-
-
 
 
 def find_dominant_color(image_path, n_clusters=2):
@@ -51,31 +44,37 @@ def get_exif_data(img):
     return exif_data
 
 
-for image_file in os.listdir(images_path):
-    #print(f"Traitement de : {image_file}")
-    image_path = os.path.join(images_path, image_file)
+def create_metadata():
+    # Chemin vers le dossier d'images et le fichier de métadonnées
+    images_path = 'images/images'
+    metadata_file = 'image_metadata.json'
+    metadata = []
 
-    img = Image.open(image_path)
-    # Extraction des données Exif
-    exif_data = get_exif_data(img)
-    dominant_color = find_dominant_color(image_path)  # Trouver la couleur dominante
+    for image_file in os.listdir(images_path):
+        #print(f"Traitement de : {image_file}")
+        image_path = os.path.join(images_path, image_file)
 
-    print(exif_data)
-    metadata.append({
-        "nom": image_file,
-        "taille": img.size,
-        "format": img.format,
-        "orientation": get_image_orientation(img),
-        "exif": exif_data,  # Ajoutez les données Exif ici
-        "couleur_dominante": dominant_color,  # Ajouter la couleur dominante aux métadonnées
+        img = Image.open(image_path)
+        # Extraction des données Exif
+        exif_data = get_exif_data(img)
+        dominant_color = find_dominant_color(image_path)  # Trouver la couleur dominante
 
-        "tags": [],
-        "favori": "n/a"
-    })
+        print(exif_data)
+        metadata.append({
+            "nom": image_file,
+            "taille": img.size,
+            "format": img.format,
+            "orientation": get_image_orientation(img),
+            "exif": exif_data,  # Ajoutez les données Exif ici
+            "couleur_dominante": dominant_color,  # Ajouter la couleur dominante aux métadonnées
 
-if metadata:
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f, indent=4)
-    print("Métadonnées enregistrées.")
-else:
-    print("Aucune métadonnée à enregistrer.")
+            "tags": [],
+            "favori": "n/a"
+        })
+
+    if metadata:
+        with open(metadata_file, 'w') as f:
+            json.dump(metadata, f, indent=4)
+        print("Métadonnées enregistrées.")
+    else:
+        print("Aucune métadonnée à enregistrer.")
