@@ -46,7 +46,7 @@ def get_exif_data(img):
 
 def create_metadata():
     # Chemin vers le dossier d'images et le fichier de métadonnées
-    images_path = 'images/images'
+    images_path = 'images/unsplash-images-collection'
     metadata_file = 'image_metadata.json'
     metadata = []
 

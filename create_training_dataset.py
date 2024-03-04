@@ -144,9 +144,6 @@ def create():
     print("Images recommandées par Decision Tree :", recommended_images_tree)
 
 
-
-
-
     # Créer la fenêtre Tkinter
     root = tk.Tk()
     img_label = tk.Label(root)
