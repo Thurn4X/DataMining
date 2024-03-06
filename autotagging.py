@@ -1,20 +1,13 @@
 import os
 import json
-from tkinter import *
-from PIL import Image, ImageTk
+import sys
+from PyQt5.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout, QWidget
+from PyQt5.QtGui import QImage, QPixmap, QIcon
 from tensorflow.keras.applications import InceptionV3
 from tensorflow.keras.applications.inception_v3 import preprocess_input, decode_predictions
-
-
 from tensorflow.keras.preprocessing import image
 import numpy as np
 
-# Chemin vers le dossier d'images et le fichier de métadonnées
-image_folder = 'images/unsplash-images-collection'
-metadata_file = 'image_metadata.json'
-
-# Charger le modèle ResNet50 pré-entraîné sur ImageNet
-model = InceptionV3(weights='imagenet')
 
 def predict_tags(img_path):
     """Génère des tags pour une image en utilisant InceptionV3."""
@@ -23,75 +16,92 @@ def predict_tags(img_path):
     x = image.img_to_array(img)
     x = np.expand_dims(x, axis=0)
     x = preprocess_input(x)
-
+    model = InceptionV3(weights='imagenet')
     preds = model.predict(x)
     # Retourne une liste des top 3 tags prédits
     return [tag[1] for tag in decode_predictions(preds, top=3)[0]]
 
-# Charger les métadonnées existantes
-def load_metadata():
-    with open(metadata_file, 'r') as f:
-        return json.load(f)
 
-# Initialiser l'interface utilisateur
-root = Tk()
-img_label = Label(root)
-img_label.pack(side="left", padx=10)
+class ImageTagger(QWidget):
+    def __init__(self, image_folder, metadata_file):
+        super().__init__()
+        self.setWindowTitle("Image Tagger")
+        self.metadata_file = metadata_file
+        self.metadata = self.load_metadata()
+        self.image_folder = image_folder
+        self.image_files = [file for file in os.listdir(image_folder) if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+        self.current_image_index = 0
 
-tag_entry = Entry(root, width=50)
-tag_entry.pack(side="left", padx=10)
+        self.img_label = QLabel()
+        self.tag_entry = QLineEdit()
 
-metadata = load_metadata()
-image_files = [file for file in os.listdir(image_folder) if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
-current_image_index = [0]
+        self.save_button = QPushButton("Save Tag")
+        self.save_button.clicked.connect(self.save_tag)
 
-def update_image():
-    """Affiche l'image actuelle et génère des tags automatiquement."""
-    global current_image_index, metadata, img_label
-    image_path = os.path.join(image_folder, image_files[current_image_index[0]])
-    img = Image.open(image_path)
-    img = img.resize((250, 250), Image.Resampling.LANCZOS)
-    img_tk = ImageTk.PhotoImage(img)
-    img_label.configure(image=img_tk)
-    img_label.image = img_tk  # Gardez une référence
+        self.next_button = QPushButton("Next Image")
+        self.next_button.clicked.connect(self.next_image)
 
-    # Générer et afficher les tags prédits
-    predicted_tags = predict_tags(image_path)
-    tag_entry.delete(0, END)  # Effacer le champ existant
-    tag_entry.insert(0, ", ".join(predicted_tags))  # Insérer les tags prédits
+        self.prev_button = QPushButton("Previous Image")
+        self.prev_button.clicked.connect(self.prev_image)
 
-def save_tag():
-    """Sauvegarde le tag modifié ou confirmé par l'utilisateur."""
-    tag = tag_entry.get().strip()
-    image_name = image_files[current_image_index[0]]
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(self.img_label)
+        hbox1.addWidget(self.tag_entry)
 
-    for entry in metadata:
-        if entry["nom"] == image_name:
-            entry["tags"] = tag.split(", ")
-            break
+        hbox2 = QHBoxLayout()
+        hbox2.addWidget(self.prev_button)
+        hbox2.addWidget(self.next_button)
+        hbox2.addWidget(self.save_button)
 
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f, indent=4)
-    
-    tag_entry.delete(0, END)
-    next_image()
+        vbox = QVBoxLayout()
+        vbox.addLayout(hbox1)
+        vbox.addLayout(hbox2)
 
-def next_image():
-    current_image_index[0] = (current_image_index[0] + 1) % len(image_files)
-    update_image()
+        self.setLayout(vbox)
 
-def prev_image():
-    current_image_index[0] = (current_image_index[0] - 1) % len(image_files)
-    update_image()
+        self.update_image()
 
-save_button = Button(root, text="Save Tag", command=save_tag)
-save_button.pack(side="left", padx=10)
+    def update_image(self):
+        """Affiche l'image actuelle et génère des tags automatiquement."""
+        image_path = os.path.join(self.image_folder, self.image_files[self.current_image_index])
+        pixmap = QPixmap(str(image_path))
+        self.img_label.setPixmap(pixmap)
+        # Générer et afficher les tags prédits
+        predicted_tags = predict_tags(image_path)
+        self.tag_entry.setText(", ".join(predicted_tags))
 
-next_button = Button(root, text="Next Image", command=next_image)
-next_button.pack(side="right", padx=10)
+    def save_metadata(self):
+        with open(self.metadata_file, 'w') as f:
+            json.dump(self.metadata, f, indent=4)
 
-prev_button = Button(root, text="Previous Image", command=prev_image)
-prev_button.pack(side="right", padx=10)
+    def load_metadata(self):
+        with open(self.metadata_file, 'r') as f:
+            return json.load(f)
 
-update_image()
-root.mainloop()
+    def save_tag(self):
+        tag = self.tag_entry.text().strip()
+        if tag:
+            image_name = self.image_files[self.current_image_index]
+            for entry in self.metadata:
+                image_key = next(
+                    (key for key in entry.keys() if isinstance(entry[key], str) and entry[key].endswith(image_name)),
+                    None)
+                if image_key:
+                    if "tags" not in entry:
+                        entry["tags"] = []
+                    for new_tag in tag.split(", "):
+                        if new_tag not in entry["tags"]:
+                            entry["tags"].append(new_tag)
+                    break
+            else:
+                self.metadata.append({image_name: image_name, "tags": [tag]})
+            self.save_metadata()
+            self.tag_entry.clear()
+
+    def next_image(self):
+        self.current_image_index = (self.current_image_index + 1) % len(self.image_files)
+        self.update_image()
+
+    def prev_image(self):
+        self.current_image_index = (self.current_image_index - 1) % len(self.image_files)
+        self.update_image()
