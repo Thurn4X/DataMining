@@ -51,7 +51,6 @@ def create_metadata():
     metadata = []
 
     for image_file in os.listdir(images_path):
-        #print(f"Traitement de : {image_file}")
         image_path = os.path.join(images_path, image_file)
 
         img = Image.open(image_path)
@@ -59,7 +58,6 @@ def create_metadata():
         exif_data = get_exif_data(img)
         dominant_color = find_dominant_color(image_path)  # Trouver la couleur dominante
 
-        print(exif_data)
         metadata.append({
             "nom": image_file,
             "taille": img.size,
