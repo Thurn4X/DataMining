@@ -6,8 +6,8 @@ import sorting
 import create_training_dataset
 
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
+from PyQt6.QtCore import Qt
 
 
 class MainWindow(QMainWindow):
@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(layout)
 
         self.image_count_label = QLabel("Nombre d'images: 0")
-        layout.addWidget(self.image_count_label, alignment=Qt.AlignHCenter)
+        layout.addWidget(self.image_count_label, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         self.download_button = QPushButton("Téléchargement des images")
         self.download_button.clicked.connect(self.download_images)
@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         font = warning_label.font()
         font.setBold(True)
         warning_label.setFont(font)
-        warning_label.setAlignment(Qt.AlignHCenter)
+        warning_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(warning_label)
 
         button_layout = QHBoxLayout()
@@ -94,4 +94,4 @@ if __name__ == '__main__':
     app = QApplication([])
     main_window = MainWindow()
     main_window.show()
-    app.exec_()
+    app.exec()
