@@ -50,7 +50,7 @@ def prev_image(image_folder, image_files, current_image_index, img_label):
 
 def window():
     # Chemin vers le dossier d'images et le fichier de métadonnées
-    image_folder = 'images/images'
+    image_folder = 'images/unsplash-images-collection'
     metadata_file = 'image_metadata.json'
 
     # Initialiser l'interface utilisateur
