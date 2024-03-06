@@ -8,6 +8,19 @@ import os
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QMessageBox
 from PyQt5.QtCore import Qt
 
+
+class AnotherWindow(QWidget):
+    """
+    This "window" is a QWidget. If it has no parent, it
+    will appear as a free-floating window as we want.
+    """
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+        self.label = QLabel("Another Window")
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -36,7 +49,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(warning_label)
 
         self.add_tags_button = QPushButton("Ajout de tags")
-        self.add_tags_button.clicked.connect(addtags.window)
+        self.add_tags_button.clicked.connect(self.open_addtags)
         layout.addWidget(self.add_tags_button)
 
         self.sort_images_button = QPushButton("Tri des images")
@@ -49,6 +62,9 @@ class MainWindow(QMainWindow):
 
         self.update_image_count()
 
+    def open_addtags(self):
+        self.w = addtags.ImageTagger("images/unsplash-images-collection", "image_metadata.json")
+        self.w.show()
     def update_image_count(self):
         count = 0
         try:

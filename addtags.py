@@ -1,80 +1,92 @@
-import os
-from tkinter import *
-from PIL import Image, ImageTk
+from pathlib import Path
 import json
+from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout
+from PyQt5.QtGui import QPixmap
 
 
-# Charger les métadonnées existantes
-def load_metadata(metadata_file):
-    with open(metadata_file, 'r') as f:
-        return json.load(f)
+class ImageTagger(QWidget):
+    def __init__(self, image_folder, metadata_file):
+        super().__init__()
+        self.image_folder = Path(image_folder)
+        self.metadata_file = Path(metadata_file)
+        self.image_files = self.get_image_files()
+        self.metadata = self.load_metadata()
+        self.current_image_index = 0
+        self.setWindowTitle("Image Tagger")
+        self.create_widgets()
+        self.update_image()
 
-# Afficher l'image actuelle
-def update_image(image_folder, image_files, current_image_index, img_label):
-    image_path = os.path.join(image_folder, image_files[current_image_index[0]])
-    img = Image.open(image_path)
-    img = img.resize((250, 250), Image.Resampling.LANCZOS)
-    img_tk = ImageTk.PhotoImage(img)
-    img_label.configure(image=img_tk)
-    img_label.image = img_tk
+    def get_image_files(self):
+        image_extensions = ('.png', '.jpg', '.jpeg', '.gif')
+        return [file.name for file in self.image_folder.iterdir() if file.suffix.lower() in image_extensions]
 
-# Ajouter un tag à l'image actuelle et sauvegarder les métadonnées
-def save_tag(tag_entry, image_files, current_image_index, metadata, metadata_file):
-    # Récupérer le tag saisi et le nom de l'image actuelle
-    tag = tag_entry.get().strip()  # Nettoyer le tag saisi
-    image_name = image_files[current_image_index[0]]  # Nom de l'image actuelle
+    def load_metadata(self):
+        if self.metadata_file.exists():
+            with open(self.metadata_file, 'r') as f:
+                return json.load(f)
+        else:
+            return []
 
-    # Chercher l'entrée correspondante dans les métadonnées grâce au nom de l'image
-    # et ajouter le tag à la liste des tags
-    for entry in metadata:
-        if entry["nom"] == image_name:
-            if "tags" not in entry:  # Si l'entrée n'a pas de clé "tags", l'ajouter
-                entry["tags"] = []
-            entry["tags"].append(tag)  # Ajouter le tag à la liste des tags pour cette image
-            break
+    def save_metadata(self):
+        with open(self.metadata_file, 'w') as f:
+            json.dump(self.metadata, f, indent=4)
 
-   # Sauvegarder les métadonnées mises à jour dans le fichier JSON
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f, indent=4)
+    def create_widgets(self):
+        main_layout = QVBoxLayout()
 
-    tag_entry.delete(0, END)  # Effacer le champ de saisie
+        self.img_label = QLabel()
+        main_layout.addWidget(self.img_label)
 
-# Fonctions pour naviguer entre les images
-def next_image(image_folder, image_files, current_image_index, img_label):
-    current_image_index[0] = (current_image_index[0] + 1) % len(image_files)
-    update_image(image_folder, image_files, current_image_index, img_label)
+        tag_layout = QHBoxLayout()
+        self.tag_entry = QLineEdit()
+        tag_layout.addWidget(self.tag_entry)
 
-def prev_image(image_folder, image_files, current_image_index, img_label):
-    current_image_index[0] = (current_image_index[0] - 1) % len(image_files)
-    update_image(image_folder, image_files, current_image_index, img_label)
+        save_button = QPushButton("Save Tag")
+        save_button.clicked.connect(self.save_tag)
+        tag_layout.addWidget(save_button)
 
-def window():
-    # Chemin vers le dossier d'images et le fichier de métadonnées
-    image_folder = 'images/unsplash-images-collection'
-    metadata_file = 'image_metadata.json'
+        main_layout.addLayout(tag_layout)
 
-    # Initialiser l'interface utilisateur
-    root = Tk()
-    img_label = Label(root)
-    img_label.pack()
+        button_layout = QHBoxLayout()
+        prev_button = QPushButton("Previous Image")
+        prev_button.clicked.connect(self.prev_image)
+        button_layout.addWidget(prev_button)
 
-    tag_entry = Entry(root)
-    tag_entry.pack()
+        next_button = QPushButton("Next Image")
+        next_button.clicked.connect(self.next_image)
+        button_layout.addWidget(next_button)
 
-    metadata = load_metadata(metadata_file)
-    # on prend les images qui sont dans le dossier et qui ont une extension .png, .jpg, .jpeg, .gif
-    image_files = [file for file in os.listdir(image_folder) if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
-    # on prend l'index de l'image actuelle pour parcourir les images plus tard
-    current_image_index = [0]
+        main_layout.addLayout(button_layout)
 
-    # Boutons pour sauvegarder les tags et naviguer entre les images
-    save_button = Button(root, text="Save Tag", command=lambda: save_tag(tag_entry, image_files, current_image_index, metadata, metadata_file))
-    save_button.pack()
+        self.setLayout(main_layout)
 
-    next_button = Button(root, text="Next Image", command=lambda: next_image(image_folder, image_files, current_image_index, img_label))
-    next_button.pack()
-    prev_button = Button(root, text="Previous Image", command=lambda: prev_image(image_folder, image_files, current_image_index, img_label))
-    prev_button.pack()
+    def update_image(self):
+        image_path = self.image_folder / self.image_files[self.current_image_index]
+        pixmap = QPixmap(str(image_path))
+        self.img_label.setPixmap(pixmap)
 
-    update_image(image_folder, image_files, current_image_index, img_label)
-    root.mainloop()
+    def save_tag(self):
+        tag = self.tag_entry.text().strip()
+        if tag:
+            image_name = self.image_files[self.current_image_index]
+            for entry in self.metadata:
+                image_key = next(
+                    (key for key in entry.keys() if isinstance(entry[key], str) and entry[key].endswith(image_name)),
+                    None)
+                if image_key:
+                    if "tags" not in entry:
+                        entry["tags"] = []
+                    entry["tags"].append(tag)
+                    break
+            else:
+                self.metadata.append({image_name: image_name, "tags": [tag]})
+            self.save_metadata()
+            self.tag_entry.clear()
+
+    def next_image(self):
+        self.current_image_index = (self.current_image_index + 1) % len(self.image_files)
+        self.update_image()
+
+    def prev_image(self):
+        self.current_image_index = (self.current_image_index - 1) % len(self.image_files)
+        self.update_image()
