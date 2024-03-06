@@ -48,5 +48,5 @@ def update_metadata_with_tags():
     with open(metadata_file, 'w') as f:
         json.dump(metadata, f, indent=4)
 
-# Mise à jour des métadonnées avec les tags prédits
-update_metadata_with_tags()
+if __name__ == "__main__":
+    update_metadata_with_tags()

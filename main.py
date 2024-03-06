@@ -1,7 +1,7 @@
 import acquisition
 import metadata
 import addtags
-import autotagging
+import autotagging_noverif
 import sorting
 import create_training_dataset
 
@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.add_tags_button)
 
         self.auto_tags_button = QPushButton("Tags automatiques")
-        self.auto_tags_button.clicked.connect(self.open_autotags)
+        self.auto_tags_button.clicked.connect(autotagging_noverif.update_metadata_with_tags)
         button_layout.addWidget(self.auto_tags_button)
 
         layout.addLayout(button_layout)
@@ -61,10 +61,6 @@ class MainWindow(QMainWindow):
 
     def open_addtags(self):
         self.w = addtags.ImageTagger("images/unsplash-images-collection", "image_metadata.json")
-        self.w.show()
-
-    def open_autotags(self):
-        self.w = autotagging.ImageTagger("images/unsplash-images-collection", "image_metadata.json")
         self.w.show()
 
     def update_image_count(self):
