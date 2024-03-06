@@ -1,11 +1,12 @@
 import acquisition
 import metadata
 import addtags
+import autotagging
 import sorting
 import create_training_dataset
 
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
 from PyQt5.QtCore import Qt
 
 
@@ -36,9 +37,17 @@ class MainWindow(QMainWindow):
         warning_label.setAlignment(Qt.AlignHCenter)
         layout.addWidget(warning_label)
 
+        button_layout = QHBoxLayout()
+
         self.add_tags_button = QPushButton("Ajout de tags")
         self.add_tags_button.clicked.connect(self.open_addtags)
-        layout.addWidget(self.add_tags_button)
+        button_layout.addWidget(self.add_tags_button)
+
+        self.auto_tags_button = QPushButton("Tags automatiques")
+        self.auto_tags_button.clicked.connect(self.open_autotags)
+        button_layout.addWidget(self.auto_tags_button)
+
+        layout.addLayout(button_layout)
 
         self.sort_images_button = QPushButton("Tri des images")
         self.sort_images_button.clicked.connect(sorting.tri)
@@ -53,6 +62,11 @@ class MainWindow(QMainWindow):
     def open_addtags(self):
         self.w = addtags.ImageTagger("images/unsplash-images-collection", "image_metadata.json")
         self.w.show()
+
+    def open_autotags(self):
+        self.w = autotagging.ImageTagger("images/unsplash-images-collection", "image_metadata.json")
+        self.w.show()
+
     def update_image_count(self):
         count = 0
         try:
