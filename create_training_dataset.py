@@ -1,162 +1,109 @@
-import pandas as pd
-from sklearn.preprocessing import MultiLabelBinarizer
 import json
-import numpy as np
-from sklearn.svm import SVC
-from sklearn.linear_model import Perceptron
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import classification_report
-import tkinter as tk
-from PIL import Image, ImageTk
-import time
 import os
+import time
 
-# Fonction pour afficher une image dans la fenêtre Tkinter
-def show_image(image_path, img_label, root):
-    img = Image.open(image_path)
-    img = img.resize((250, 250), Image.Resampling.LANCZOS)
-    img_tk = ImageTk.PhotoImage(img)
-    img_label.configure(image=img_tk)
-    img_label.image = img_tk
-    root.update_idletasks()
-    root.update()
-
-def create():
-    # Charger le dataset
-    with open("image_metadata.json", "r") as file:
-        data = json.load(file)
-
-    # Créer le DataFrame
-    dataframe = pd.json_normalize(data)
-
-    # Calcul de l'aire de l'image à partir de la colonne 'taille'
-    dataframe['aire_image'] = dataframe['taille'].apply(lambda x: x[0] * x[1])
-
-    # Encodage One-Hot des tags pour l'ensemble du dataset
-    mlb = MultiLabelBinarizer()
-    tags_encoded = mlb.fit_transform(dataframe['tags'])
-    tags_df = pd.DataFrame(tags_encoded, columns=mlb.classes_)
-
-    # Encodage One-Hot pour 'format' et 'orientation' pour l'ensemble du dataset
-    format_df = pd.get_dummies(dataframe['format'], prefix='format')
-    orientation_df = pd.get_dummies(dataframe['orientation'], prefix='orientation')
-
-    # Concaténer les caractéristiques pour l'ensemble du dataset
-    # Exemple de création de colonnes pour les composantes RGB de la couleur dominante
-    dataframe['dominant_color_r'] = dataframe['couleur_dominante'].apply(lambda x: x[0] if isinstance(x, list) else 0)
-    dataframe['dominant_color_g'] = dataframe['couleur_dominante'].apply(lambda x: x[1] if isinstance(x, list) else 0)
-    dataframe['dominant_color_b'] = dataframe['couleur_dominante'].apply(lambda x: x[2] if isinstance(x, list) else 0)
-
-    # Ajouter les colonnes de couleur dominante au DataFrame final
-    all_final_df = pd.concat([
-        tags_df,
-        format_df,
-        orientation_df,
-        dataframe[['aire_image', 'dominant_color_r', 'dominant_color_g', 'dominant_color_b']]
-    ], axis=1)
-
-    # Séparer les images évaluées et non évaluées
-    dataframe_evalue = dataframe[dataframe['favori'] != 'n/a']
-    dataframe_non_evalue = dataframe[dataframe['favori'] == 'n/a']
-
-    # Préparation des labels pour le set évalué
-    labels_evalue = dataframe_evalue['favori'].map({'yes': 1, 'no': 0})
-
-    # Sélectionner les caractéristiques pour les images évaluées uniquement pour l'entraînement
-    X_train = all_final_df.loc[dataframe_evalue.index]
-    print(X_train)
-    y_train = labels_evalue
-
-    # Sélectionner les caractéristiques pour les images non évaluées pour la prédiction
-    X_test = all_final_df.loc[dataframe_non_evalue.index]
-    from sklearn.model_selection import train_test_split
-
-    # Diviser les données évaluées en ensembles d'entraînement et de test
-    X_train_eval, X_test_eval, y_train_eval, y_test_eval = train_test_split(
-        X_train, y_train, test_size=0.2, random_state=50)
+import numpy as np
+import pandas as pd
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout
+from sklearn.linear_model import Perceptron
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 
-    # Initialisation des modèles
-    svc = SVC(probability=True)  # Pour SVC, activez la probabilité pour obtenir des scores de prédiction
-    perceptron = Perceptron()
-    decision_tree = DecisionTreeClassifier()
+class ImageRecommender(QWidget):
+    def __init__(self, image_folder):
+        super().__init__()
+        self.img_label = None
+        self.image_folder = image_folder
+        self.data = self.load_data()
+        self.dataframe = self.create_dataframe()
+        self.models = self.train_models()
+        self.recommended_images = self.get_recommendations()
+        self.init_ui()
+        self.show_images()
 
-    # Entraînement des modèles sur l'ensemble d'entraînement évalué
-    svc.fit(X_train_eval, y_train_eval)
-    perceptron.fit(X_train_eval, y_train_eval)
-    decision_tree.fit(X_train_eval, y_train_eval)
+    @staticmethod
+    def load_data():
+        with open("image_metadata.json", "r") as file:
+            data = json.load(file)
+        return data
 
+    def create_dataframe(self):
+        dataframe = pd.json_normalize(self.data)
+        dataframe['aire_image'] = dataframe['taille'].apply(lambda x: x[0] * x[1])
 
-    # Faire des prédictions sur l'ensemble de test évalué
-    predictions_svc_eval = svc.predict(X_test_eval)
-    predictions_perceptron_eval = perceptron.predict(X_test_eval)
-    predictions_tree_eval = decision_tree.predict(X_test_eval)
+        mlb = MultiLabelBinarizer()
+        tags_encoded = mlb.fit_transform(dataframe['tags'])
+        tags_df = pd.DataFrame(tags_encoded, columns=mlb.classes_)
 
-    # Afficher la précision et d'autres métriques pour chaque modèle
-    print("Classification Report pour SVC:")
-    print(classification_report(y_test_eval, predictions_svc_eval))
+        format_df = pd.get_dummies(dataframe['format'], prefix='format')
+        orientation_df = pd.get_dummies(dataframe['orientation'], prefix='orientation')
 
-    print("Classification Report pour Perceptron:")
-    print(classification_report(y_test_eval, predictions_perceptron_eval))
+        dataframe['dominant_color_r'] = dataframe['couleur_dominante'].apply(
+            lambda x: x[0] if isinstance(x, list) else 0)
+        dataframe['dominant_color_g'] = dataframe['couleur_dominante'].apply(
+            lambda x: x[1] if isinstance(x, list) else 0)
+        dataframe['dominant_color_b'] = dataframe['couleur_dominante'].apply(
+            lambda x: x[2] if isinstance(x, list) else 0)
 
-    print("Classification Report pour Decision Tree:")
-    print(classification_report(y_test_eval, predictions_tree_eval))
+        all_final_df = pd.concat([
+            tags_df,
+            format_df,
+            orientation_df,
+            dataframe[['aire_image', 'dominant_color_r', 'dominant_color_g', 'dominant_color_b']]
+        ], axis=1)
 
+        dataframe_evalue = dataframe[dataframe['favori'] != 'n/a']
+        dataframe_non_evalue = dataframe[dataframe['favori'] == 'n/a']
 
-    #################### recommandation par svc ############################
+        labels_evalue = dataframe_evalue['favori'].map({'yes': 1, 'no': 0})
 
-    # Obtenir les probabilités de la classe positive (par exemple, "aimé" ou 1)
-    probabilities_svc = svc.predict_proba(X_test)[:, 1]
-    # Obtenir les indices des images triées par probabilité décroissante
-    indices_sorted_svc = np.argsort(probabilities_svc)[::-1]
+        X_train = all_final_df.loc[dataframe_evalue.index]
+        y_train = labels_evalue
 
-    # Sélectionner le top N images
-    top_n = 10
-    top_indices_svc = indices_sorted_svc[:top_n]
+        X_test = all_final_df.loc[dataframe_non_evalue.index]
 
-    # Récupérer les noms des images pour les top-N recommandations
-    recommended_images_svc = dataframe_non_evalue.iloc[top_indices_svc]['nom'].values
-    print("Images recommandées par SVC :", recommended_images_svc)
+        return X_train, X_test, y_train, dataframe_non_evalue
 
-    #################### recommandation par decision tree ############################
-    # Faire des prédictions sur les données non évaluées
-    predictions_tree = decision_tree.predict(X_test)
-    # Trouver les indices des images prédites comme aimées ("yes")
-    indices_liked = np.where(predictions_tree == 1)[0]
+    def train_models(self):
+        X_train, _, y_train, _ = self.dataframe
 
-    # Noms des caractéristiques
-    feature_names = all_final_df.columns
+        svc = SVC(probability=True)
+        perceptron = Perceptron()
+        decision_tree = DecisionTreeClassifier()
 
-    # Afficher l'importance avec les noms des caractéristiques
-    importances = decision_tree.feature_importances_
-    importances_with_names = zip(feature_names, importances)
-    sorted_importances = sorted(importances_with_names, key=lambda x: x[1], reverse=True)
+        svc.fit(X_train, y_train)
+        perceptron.fit(X_train, y_train)
+        decision_tree.fit(X_train, y_train)
 
-    for name, importance in sorted_importances:
-        print(f"{name}: {importance}")
+        return svc, perceptron, decision_tree
 
-    top_n = 10  # Nombre d'images recommandées
-    recommended_indices = indices_liked[:top_n]
+    def get_recommendations(self):
+        _, X_test, _, dataframe_non_evalue = self.dataframe
+        svc, _, decision_tree = self.models
 
-    # Récupérer les noms des images recommandées
-    recommended_images_tree = dataframe_non_evalue.iloc[recommended_indices]['nom'].values
+        predictions_tree = decision_tree.predict(X_test)
+        indices_liked = np.where(predictions_tree == 1)[0]
+        top_n = 10
+        recommended_indices = indices_liked[:top_n]
+        recommended_images_tree = dataframe_non_evalue.iloc[recommended_indices]['nom'].values
 
-    print("Images recommandées par Decision Tree :", recommended_images_tree)
+        return recommended_images_tree
 
+    def init_ui(self):
+        layout = QVBoxLayout()
+        self.img_label = QLabel()
+        layout.addWidget(self.img_label)
+        self.setLayout(layout)
 
-    # Créer la fenêtre Tkinter
-    root = tk.Tk()
-    img_label = tk.Label(root)
-    img_label.pack()
-
-    # Définir le dossier contenant les images et les noms des images recommandées
-    image_folder = 'images/unsplash-images-collection-collection'
-    recommended_images = recommended_images_tree  # Supposons que ceci est la liste des noms d'images recommandées
-
-    # Afficher chaque image recommandée
-    for image_name in recommended_images:
-        image_path = os.path.join(image_folder, image_name)
-        show_image(image_path, img_label, root)
-        time.sleep(2)  # Attendre 2 secondes avant de passer à l'image suivante
-
-    root.mainloop()
+    def show_images(self):
+        for image_name in self.recommended_images:
+            image_path = os.path.join(self.image_folder, image_name)
+            pixmap = QPixmap(image_path)
+            pixmap = pixmap.scaled(250, 250)
+            self.img_label.setPixmap(pixmap)
+            self.show()
+            QApplication.processEvents()
+            time.sleep(2)

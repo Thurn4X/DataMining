@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.sort_images_button)
 
         self.create_dataset_button = QPushButton("Création du jeu de données")
-        self.create_dataset_button.clicked.connect(create_training_dataset.create)
+        self.create_dataset_button.clicked.connect(self.open_results)
         layout.addWidget(self.create_dataset_button)
 
         self.update_image_count()
@@ -76,6 +76,10 @@ class MainWindow(QMainWindow):
 
             pass
         self.image_count_label.setText(f"Nombre d'images: {count}")
+
+    def open_results(self):
+        self.w = create_training_dataset.ImageRecommender("images/unsplash-images-collection")
+        self.w.show()
 
     def download_images(self):
         image_folder = "images/unsplash-images-collection"
