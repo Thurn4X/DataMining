@@ -7,6 +7,8 @@ from PyQt5.QtGui import QPixmap
 class ImageTagger(QWidget):
     def __init__(self, image_folder, metadata_file):
         super().__init__()
+        self.tag_entry = None
+        self.img_label = None
         self.image_folder = Path(image_folder)
         self.metadata_file = Path(metadata_file)
         self.image_files = self.get_image_files()
