@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(button_layout)
 
         self.sort_images_button = QPushButton("Tri des images")
-        self.sort_images_button.clicked.connect(sorting.tri)
+        self.sort_images_button.clicked.connect(self.open_sorting)
         layout.addWidget(self.sort_images_button)
 
         self.create_dataset_button = QPushButton("Création du jeu de données")
@@ -61,6 +61,10 @@ class MainWindow(QMainWindow):
 
     def open_addtags(self):
         self.w = addtags.ImageTagger("images/unsplash-images-collection", "image_metadata.json")
+        self.w.show()
+
+    def open_sorting(self):
+        self.w = sorting.ImageSorter("images/unsplash-images-collection", "image_metadata.json")
         self.w.show()
 
     def update_image_count(self):

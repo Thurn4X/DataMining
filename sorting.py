@@ -2,88 +2,77 @@ from pandas import json_normalize
 import pandas as pd
 import json
 import os
-from tkinter import *
-from PIL import Image, ImageTk
-
-# Charger les métadonnées existantes
-def load_metadata(metadata_file):
-    with open(metadata_file, 'r') as f:
-        return json.load(f)
-
-# Afficher l'image actuelle
-def update_image(image_folder, image_files, current_image_index, img_label):
-    image_path = os.path.join(image_folder, image_files[current_image_index[0]])
-    img = Image.open(image_path)
-    img = img.resize((250, 250), Image.Resampling.LANCZOS)
-    img_tk = ImageTk.PhotoImage(img)
-    img_label.configure(image=img_tk)
-    img_label.image = img_tk
-
-# Ajouter un tag à l'image actuelle et sauvegarder les métadonnées
-def favori(image_files, current_image_index, metadata_file, metadata, image_folder, img_label):
-    image_name = image_files[current_image_index[0]]  # Nom de l'image actuelle
-
-    # Chercher l'entrée correspondante dans les métadonnées grâce au nom de l'image
-    # et ajouter le tag à la liste des tags
-    for entry in metadata:
-        if entry["nom"] == image_name:
-            entry["favori"] = "yes"
-            break
-   # Sauvegarder les métadonnées mises à jour dans le fichier JSON
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f, indent=5)
-    next_image(current_image_index, image_files, image_folder, img_label)
-
-def nonfavori(image_files, current_image_index, metadata_file, metadata, image_folder, img_label):
-    image_name = image_files[current_image_index[0]]  # Nom de l'image actuelle
-
-    # Chercher l'entrée correspondante dans les métadonnées grâce au nom de l'image
-    # et ajouter le tag à la liste des tags
-    for entry in metadata:
-        if entry["nom"] == image_name:
-            entry["favori"] = "no"
-            break
-   # Sauvegarder les métadonnées mises à jour dans le fichier JSON
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f, indent=5)
-    next_image(current_image_index, image_files, image_folder, img_label)
-
-# Fonctions pour naviguer entre les images
-def next_image(current_image_index, image_files, image_folder, img_label):
-    current_image_index[0] = (current_image_index[0] + 1) % len(image_files)
-    update_image(image_folder, image_files, current_image_index, img_label)
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtGui import QPixmap
 
 
-def tri():
-    data = json.load(open("image_metadata.json"))
-    dataframe = json_normalize(data)
-    print(dataframe)
+class ImageSorter(QWidget):
+    def __init__(self, image_folder, metadata_file):
+        super().__init__()
+        self.image_folder = image_folder
+        self.metadata_file = metadata_file
+        self.metadata = self.load_metadata()
+        self.image_files = self.get_image_files()
+        self.current_image_index = 0
 
+        self.init_ui()
+        self.load_image()
 
-    # Chemin vers le dossier d'images et le fichier de métadonnées
-    image_folder = 'images/unsplash-images-collection'
-    metadata_file = 'image_metadata.json'
+    def load_metadata(self):
+        with open(self.metadata_file, 'r') as f:
+            return json.load(f)
 
+    def get_image_files(self):
+        return [file for file in os.listdir(self.image_folder) if
+                file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
 
-    # Initialiser l'interface utilisateur
-    root = Tk()
-    img_label = Label(root)
-    img_label.pack()
+    def init_ui(self):
+        layout = QVBoxLayout()
 
+        self.img_label = QLabel()
+        layout.addWidget(self.img_label)
 
-    metadata = load_metadata(metadata_file)
-    # on prend les images qui sont dans le dossier et qui ont une extension .png, .jpg, .jpeg, .gif
-    image_files = [file for file in os.listdir(image_folder) if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
-    # on prend l'index de l'image actuelle pour parcourir les images plus tard
-    current_image_index = [0]
+        like_button = QPushButton("J'aime")
+        like_button.clicked.connect(self.favori)
+        layout.addWidget(like_button)
 
+        dislike_button = QPushButton("J'aime pas")
+        dislike_button.clicked.connect(self.nonfavori)
+        layout.addWidget(dislike_button)
 
-    # Boutons pour sauvegarder les tags et naviguer entre les images
-    like_button = Button(root, text="J'aime", command=lambda: favori(image_files, current_image_index, metadata_file, metadata, image_folder, img_label))
-    like_button.pack()
-    dislike_button = Button(root, text="J'aime pas", command=lambda: nonfavori(image_files, current_image_index, metadata_file, metadata, image_folder, img_label))
-    dislike_button.pack()
+        self.setLayout(layout)
 
+    def load_image(self):
+        image_path = os.path.join(self.image_folder, self.image_files[self.current_image_index])
+        pixmap = QPixmap(image_path)
+        pixmap = pixmap.scaled(250, 250)
+        self.img_label.setPixmap(pixmap)
 
-    update_image(image_folder, image_files, current_image_index, img_label)
-    root.mainloop()
+    def favori(self):
+        image_name = self.image_files[self.current_image_index]
+        for entry in self.metadata:
+            if entry["nom"] == image_name:
+                entry["favori"] = "yes"
+                break
+        with open(self.metadata_file, 'w') as f:
+            json.dump(self.metadata, f, indent=5)
+        self.next_image()
+
+    def nonfavori(self):
+        image_name = self.image_files[self.current_image_index]
+        for entry in self.metadata:
+            if entry["nom"] == image_name:
+                entry["favori"] = "no"
+                break
+        with open(self.metadata_file, 'w') as f:
+            json.dump(self.metadata, f, indent=5)
+        self.next_image()
+
+    def next_image(self):
+        self.current_image_index = (self.current_image_index + 1) % len(self.image_files)
+        self.load_image()
+
+    def tri(self):
+        data = json.load(open("image_metadata.json"))
+        dataframe = json_normalize(data)
+        print(dataframe)
