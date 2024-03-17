@@ -1,18 +1,21 @@
+import os
+
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, \
+    QMessageBox
+
 import acquisition
-import metadata
 import addtags
 import autotagging_noverif
-import sorting
 import create_training_dataset
-
-import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
-from PyQt5.QtCore import Qt
+import metadata
+import sorting
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.w = None
         self.setWindowTitle("Recommendation")
         self.setGeometry(100, 100, 600, 300)
 
@@ -29,7 +32,8 @@ class MainWindow(QMainWindow):
         self.download_button.clicked.connect(self.download_images)
         layout.addWidget(self.download_button)
 
-        warning_label = QLabel("Attention:\nCette opération efface les images déjà téléchargées et les métadonnées existantes.")
+        warning_label = QLabel(
+            "Attention:\nCette opération efface les images déjà téléchargées et les métadonnées existantes.")
         # Make the warning label bold
         font = warning_label.font()
         font.setBold(True)
@@ -97,6 +101,7 @@ class MainWindow(QMainWindow):
         metadata.create_metadata()
 
         QMessageBox.information(self, "Téléchargement terminé", "Les images ont été téléchargées avec succès.")
+
 
 if __name__ == '__main__':
     app = QApplication([])

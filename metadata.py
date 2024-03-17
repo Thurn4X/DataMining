@@ -1,10 +1,9 @@
-from PIL import Image, ExifTags
-import os
 import json
-from sklearn.cluster import MiniBatchKMeans
+import os
+
 import numpy as np
-
-
+from PIL import Image, ExifTags
+from sklearn.cluster import MiniBatchKMeans
 
 
 def find_dominant_color(image_path, n_clusters=2):
@@ -32,6 +31,7 @@ def get_image_orientation(img):
         return "portrait"
     else:
         return "carre"
+
 
 # Fonction pour extraire les données Exif
 def get_exif_data(img):

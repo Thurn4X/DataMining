@@ -1,13 +1,15 @@
-import gdown
-import zipfile
 import os
+import zipfile
+
+import gdown
+
 
 def acquire():
     # URL de téléchargement direct Google Drive
     # pour le gros dataset non tagged
     url = 'https://drive.google.com/uc?id=16rYRrxUXpGyPWVq5uhgYzNlZd6hsGX7-'
     # pour le petit dataset pokemon
-    #url = 'https://drive.google.com/uc?id=1yfy6XXv0VikxR8xTuz-xQts_MmGWRDUy'
+    # url = 'https://drive.google.com/uc?id=1yfy6XXv0VikxR8xTuz-xQts_MmGWRDUy'
     # Chemin de destination
     output = 'dataset.zip'
 
@@ -20,6 +22,3 @@ def acquire():
         zip_ref.extractall('images')
     # Supprime le fichier zip si désiré
     os.remove(output)
-
-
-
