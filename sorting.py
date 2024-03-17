@@ -1,14 +1,15 @@
-from pandas import json_normalize
-import pandas as pd
 import json
 import os
-from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
+
 from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
+from pandas import json_normalize
 
 
 class ImageSorter(QWidget):
     def __init__(self, image_folder, metadata_file):
         super().__init__()
+        self.img_label = None
         self.image_folder = image_folder
         self.metadata_file = metadata_file
         self.metadata = self.load_metadata()
@@ -72,7 +73,8 @@ class ImageSorter(QWidget):
         self.current_image_index = (self.current_image_index + 1) % len(self.image_files)
         self.load_image()
 
-    def tri(self):
+    @staticmethod
+    def tri():
         data = json.load(open("image_metadata.json"))
         dataframe = json_normalize(data)
         print(dataframe)
