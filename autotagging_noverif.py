@@ -1,10 +1,10 @@
-import os
 import json
-from PIL import Image
-from tensorflow.keras.applications import InceptionV3
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input, decode_predictions
-from tensorflow.keras.preprocessing import image
+import os
+
 import numpy as np
+from tensorflow.keras.applications import MobileNetV3Small
+from tensorflow.keras.applications.mobilenet_v3 import preprocess_input, decode_predictions
+from tensorflow.keras.preprocessing import image
 
 
 def predict_tags(img_path):
@@ -12,7 +12,7 @@ def predict_tags(img_path):
     x = image.img_to_array(img)
     x = np.expand_dims(x, axis=0)
     x = preprocess_input(x)
-    model = InceptionV3(weights='imagenet')
+    model = MobileNetV3Small(weights='imagenet')
     preds = model.predict(x)
     # Retourne une liste des top 3 tags prédits
     return [tag[1] for tag in decode_predictions(preds, top=5)[0]]
