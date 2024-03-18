@@ -2,17 +2,16 @@ import json
 import os
 
 import numpy as np
-from tensorflow.keras.applications import MobileNetV3Small
-from tensorflow.keras.applications.mobilenet_v3 import preprocess_input, decode_predictions
+from tensorflow.keras.applications import InceptionV3
+from tensorflow.keras.applications.inception_v3 import preprocess_input, decode_predictions
 from tensorflow.keras.preprocessing import image
 
 
-def predict_tags(img_path):
+def predict_tags(img_path, model):
     img = image.load_img(img_path, target_size=(299, 299))
     x = image.img_to_array(img)
     x = np.expand_dims(x, axis=0)
     x = preprocess_input(x)
-    model = MobileNetV3Small(weights='imagenet')
     preds = model.predict(x)
     # Retourne une liste des top 3 tags prédits
     return [tag[1] for tag in decode_predictions(preds, top=5)[0]]
@@ -34,10 +33,11 @@ def update_metadata_with_tags():
     metadata_file = 'image_metadata.json'
     image_files = [file for file in os.listdir(image_folder) if
                    file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+    model = InceptionV3(weights='imagenet')
     for image_name in image_files:
         image_path = os.path.join(image_folder, image_name)
         # Générer des tags prédits pour l'image
-        predicted_tags = predict_tags(image_path)
+        predicted_tags = predict_tags(image_path, model)
         # Trouver l'entrée correspondante dans les métadonnées et mettre à jour les tags
         for entry in metadata:
             if entry["nom"] == image_name:
