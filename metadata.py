@@ -5,14 +5,23 @@ import numpy as np
 from PIL import Image, ExifTags
 from sklearn.cluster import MiniBatchKMeans
 
+import webcolors
+
+def closest_color(requested_color):
+    min_colors = {}
+    for key, name in webcolors.CSS3_HEX_TO_NAMES.items():
+        r_c, g_c, b_c = webcolors.hex_to_rgb(key)
+        rd = (r_c - requested_color[0]) ** 2
+        gd = (g_c - requested_color[1]) ** 2
+        bd = (b_c - requested_color[2]) ** 2
+        min_colors[(rd + gd + bd)] = name
+    return min_colors[min(min_colors.keys())]
 
 def find_dominant_color(image_path, n_clusters=2):
-    img = Image.open(image_path).convert('RGBA')  # Convertir en RGBA
-    img = img.resize((50, 50))  # Optionnel: Redimensionner
-
-    # Convertir l'image RGBA en une array numpy, ignorer les pixels complètement transparents
+    img = Image.open(image_path).convert('RGBA')
+    img = img.resize((50, 50))
     numarray = np.array(img)
-    numarray = numarray[:, :, :3][numarray[:, :, 3] > 0]  # Ignorer les pixels transparents
+    numarray = numarray[:, :, :3][numarray[:, :, 3] > 0]
 
     clusters = MiniBatchKMeans(n_clusters=n_clusters)
     clusters.fit(numarray)
@@ -20,7 +29,10 @@ def find_dominant_color(image_path, n_clusters=2):
     counts = np.bincount(clusters.labels_)
     most_frequent = clusters.cluster_centers_[counts.argmax()]
 
-    return tuple(int(c) for c in most_frequent)
+    closest_name = closest_color(tuple(int(c) for c in most_frequent))
+
+    return tuple(int(c) for c in most_frequent), closest_name
+
 
 
 # Fonction pour avoir l'orientation de l'image
