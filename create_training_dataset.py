@@ -37,26 +37,35 @@ class ImageRecommender(QWidget):
         dataframe = pd.json_normalize(self.data)
         dataframe['aire_image'] = dataframe['taille'].apply(lambda x: x[0] * x[1])
 
-        # Encodage One-Hot des tags pour l'ensemble du dataset
-        mlb = MultiLabelBinarizer()
-        # Assurez-vous que les tags sont correctement extraits en tant que liste
-        tags_encoded = mlb.fit_transform(dataframe['tags'].apply(lambda x: [x] if isinstance(x, str) else x))
-        tags_df = pd.DataFrame(tags_encoded, columns=mlb.classes_)
+        # Initialiser les DataFrames des thèmes et des tags avec des valeurs par défaut (aucun thème/tag)
+        themes_df = pd.DataFrame(index=dataframe.index)
+        tags_df = pd.DataFrame(index=dataframe.index)
+
+        # Encodage One-Hot des thèmes s'ils existent
+        if 'theme' in dataframe.columns:
+            mlb_theme = MultiLabelBinarizer()
+            themes_encoded = mlb_theme.fit_transform(dataframe['theme'].apply(lambda x: [x] if isinstance(x, str) else x))
+            themes_df = pd.DataFrame(themes_encoded, columns=mlb_theme.classes_, index=dataframe.index)
+
+        # Encodage One-Hot des tags manuels s'ils existent
+        if 'tags' in dataframe.columns:
+            mlb_tags = MultiLabelBinarizer()
+            tags_encoded = mlb_tags.fit_transform(dataframe['tags'].apply(lambda x: [x] if isinstance(x, str) else x))
+            tags_df = pd.DataFrame(tags_encoded, columns=mlb_tags.classes_, index=dataframe.index)
+
+        # Fusionner les DataFrame des thèmes et des tags
+        all_tags_df = pd.concat([themes_df, tags_df], axis=1, sort=False).fillna(0).astype(int)
 
         format_df = pd.get_dummies(dataframe['format'], prefix='format')
         orientation_df = pd.get_dummies(dataframe['orientation'], prefix='orientation')
-
-        # Pour color_df, assurez-vous que la colonne couleur_dominante est correctement traitée
         color_df = pd.get_dummies(dataframe['couleur_dominante'].apply(lambda x: x[-1] if isinstance(x, list) and len(x) > 1 else 'unknown'), prefix='color')
 
         # Concaténer toutes les caractéristiques
-        all_final_df = pd.concat([tags_df, format_df, orientation_df, color_df, dataframe[['aire_image']]], axis=1)
+        all_final_df = pd.concat([all_tags_df, format_df, orientation_df, color_df, dataframe[['aire_image']]], axis=1)
 
         # Séparer les images évaluées et non évaluées
         dataframe_evalue = dataframe[dataframe['favori'] != 'n/a']
         dataframe_non_evalue = dataframe[dataframe['favori'] == 'n/a']
-
-        # Préparation des labels pour le set évalué
         labels_evalue = dataframe_evalue['favori'].map({'yes': 1, 'no': 0})
 
         # Sélectionner les caractéristiques pour les images évaluées et non évaluées
@@ -64,12 +73,9 @@ class ImageRecommender(QWidget):
         y_train = labels_evalue
         X_test = all_final_df.loc[dataframe_non_evalue.index]
 
-        # Récupérer les noms des caractéristiques
-        feature_names = all_final_df.columns.to_list()
+        return X_train, X_test, y_train, dataframe_non_evalue, all_final_df.columns.to_list()
 
-        print("LES FEATURES: ", feature_names)
 
-        return X_train, X_test, y_train, dataframe_non_evalue, feature_names
 
     def train_models(self):
         X_train, X_test, y_train, dataframe_non_evalue, feature_names = self.create_dataframe()  # Mise à jour pour inclure feature_names

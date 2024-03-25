@@ -81,7 +81,7 @@ def update_metadata_with_tags():
         # Trouver l'entrée correspondante dans les métadonnées et mettre à jour les tags
         for entry in metadata:
             if entry["nom"] == image_name:
-                entry["tags"] = predicted_theme
+                entry["theme"] = predicted_theme
                 break
 
     # Sauvegarder les métadonnées mises à jour
