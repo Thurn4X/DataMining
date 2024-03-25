@@ -10,6 +10,9 @@ from sklearn.linear_model import Perceptron
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.model_selection import train_test_split
+
 
 
 class ImageRecommender(QWidget):
@@ -34,54 +37,72 @@ class ImageRecommender(QWidget):
         dataframe = pd.json_normalize(self.data)
         dataframe['aire_image'] = dataframe['taille'].apply(lambda x: x[0] * x[1])
 
+        # Encodage One-Hot des tags pour l'ensemble du dataset
         mlb = MultiLabelBinarizer()
-        tags_encoded = mlb.fit_transform(dataframe['tags'])
+        # Assurez-vous que les tags sont correctement extraits en tant que liste
+        tags_encoded = mlb.fit_transform(dataframe['tags'].apply(lambda x: [x] if isinstance(x, str) else x))
         tags_df = pd.DataFrame(tags_encoded, columns=mlb.classes_)
 
         format_df = pd.get_dummies(dataframe['format'], prefix='format')
         orientation_df = pd.get_dummies(dataframe['orientation'], prefix='orientation')
 
-        dataframe['dominant_color_r'] = dataframe['couleur_dominante'].apply(
-            lambda x: x[0] if isinstance(x, list) else 0)
-        dataframe['dominant_color_g'] = dataframe['couleur_dominante'].apply(
-            lambda x: x[1] if isinstance(x, list) else 0)
-        dataframe['dominant_color_b'] = dataframe['couleur_dominante'].apply(
-            lambda x: x[2] if isinstance(x, list) else 0)
+        # Pour color_df, assurez-vous que la colonne couleur_dominante est correctement traitée
+        color_df = pd.get_dummies(dataframe['couleur_dominante'].apply(lambda x: x[-1] if isinstance(x, list) and len(x) > 1 else 'unknown'), prefix='color')
 
-        all_final_df = pd.concat([
-            tags_df,
-            format_df,
-            orientation_df,
-            dataframe[['aire_image', 'dominant_color_r', 'dominant_color_g', 'dominant_color_b']]
-        ], axis=1)
+        # Concaténer toutes les caractéristiques
+        all_final_df = pd.concat([tags_df, format_df, orientation_df, color_df, dataframe[['aire_image']]], axis=1)
 
+        # Séparer les images évaluées et non évaluées
         dataframe_evalue = dataframe[dataframe['favori'] != 'n/a']
         dataframe_non_evalue = dataframe[dataframe['favori'] == 'n/a']
 
+        # Préparation des labels pour le set évalué
         labels_evalue = dataframe_evalue['favori'].map({'yes': 1, 'no': 0})
 
+        # Sélectionner les caractéristiques pour les images évaluées et non évaluées
         X_train = all_final_df.loc[dataframe_evalue.index]
         y_train = labels_evalue
-
         X_test = all_final_df.loc[dataframe_non_evalue.index]
 
-        return X_train, X_test, y_train, dataframe_non_evalue
+        # Récupérer les noms des caractéristiques
+        feature_names = all_final_df.columns.to_list()
+
+        print("LES FEATURES: ", feature_names)
+
+        return X_train, X_test, y_train, dataframe_non_evalue, feature_names
 
     def train_models(self):
-        X_train, _, y_train, _ = self.dataframe
+        X_train, X_test, y_train, dataframe_non_evalue, feature_names = self.create_dataframe()  # Mise à jour pour inclure feature_names
 
         svc = SVC(probability=True)
         perceptron = Perceptron()
         decision_tree = DecisionTreeClassifier()
 
-        svc.fit(X_train, y_train)
-        perceptron.fit(X_train, y_train)
-        decision_tree.fit(X_train, y_train)
+        X_train_eval, X_test_eval, y_train_eval, y_test_eval = train_test_split(
+            X_train, y_train, test_size=0.2, random_state=50)
+
+        svc.fit(X_train_eval, y_train_eval)
+        perceptron.fit(X_train_eval, y_train_eval)
+        decision_tree.fit(X_train_eval, y_train_eval)
+
+        for model, name in zip([svc, perceptron, decision_tree], ["SVC", "Perceptron", "Decision Tree"]):
+            y_pred = model.predict(X_test_eval)
+            print(f"--- {name} ---")
+            print("Matrice de confusion :\n", confusion_matrix(y_test_eval, y_pred))
+            print("Précision :", accuracy_score(y_test_eval, y_pred))
+            print("Rapport de classification :\n", classification_report(y_test_eval, y_pred))
+
+        importances = decision_tree.feature_importances_
+        sorted_indices = np.argsort(importances)[::-1]
+        print("Importance des caractéristiques :")
+        for idx in sorted_indices[:20]:  # Afficher les 10 caractéristiques les plus importantes
+            print(f"{feature_names[idx]}: {importances[idx]:.4f}")
 
         return svc, perceptron, decision_tree
 
+
     def get_recommendations(self):
-        _, X_test, _, dataframe_non_evalue = self.dataframe
+        _, X_test, _, dataframe_non_evalue, _ = self.create_dataframe()  # Correction pour correspondre à la structure retournée
         svc, _, decision_tree = self.models
 
         predictions_tree = decision_tree.predict(X_test)
@@ -91,6 +112,7 @@ class ImageRecommender(QWidget):
         recommended_images_tree = dataframe_non_evalue.iloc[recommended_indices]['nom'].values
 
         return recommended_images_tree
+
 
     def init_ui(self):
         layout = QVBoxLayout()
