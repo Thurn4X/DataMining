@@ -1,5 +1,5 @@
 # Projet de recommandation d'images
-
+Attention nous reccomandons d'utiliser Python 3.10 pour éviter certains problèmes liés à l'utilisation de la bibliothèque TensorFlow
 ## Description
 Ce projet a pour but de recommander des images à un utilisateur en fonction de ses préférences. Pour cela, nous avons utilisé un jeu de données contenant des images et des tags associés à ces images. Nous avons utilisé une méthode de factorisation de matrices pour prédire les tags associés à une image non taggée. Nous avons également utilisé une méthode de clustering pour regrouper les images en fonction de leurs tags.
 
