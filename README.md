@@ -1,27 +1,34 @@
-# Image Recommendation Project
+# Projet de recommandation d'images
 
-This project utilizes data mining and machine learning techniques to recommend images.
+## Description
+Ce projet a pour but de recommander des images à un utilisateur en fonction de ses préférences. Pour cela, nous avons utilisé un jeu de données contenant des images et des tags associés à ces images. Nous avons utilisé une méthode de factorisation de matrices pour prédire les tags associés à une image non taggée. Nous avons également utilisé une méthode de clustering pour regrouper les images en fonction de leurs tags.
 
-## Setup
+Il fonctionne en 5 étapes :
+1. Téléchargement des images
+2. Création d'un fichier JSON pour contenir les informations générées
+3. Reconnaissance d'objets sur les images
+4. Tri des images favorites/non favorites
+5. Recommandation d'images
 
-We recommend using a conda environment to run the code. Follow the steps below to set up the environment:
+Le projet peut à la fois être utilisé avec le notebook Projet_DataMining.ipynb ou avec le fichier main.py qui lance une interface graphique.
 
-1. Create a conda environment using the provided requirements file:
+## Installation
+Nous avons utilisé les librairies suivantes :
+- gdown
+- pillow
+- scikit-learn
+- tensorflow
+- sentence-transformers
+- ipywidgets
+- pandas
 
-    ```bash
-    conda create --name DataMiningProject --file requirements.txt
-    ```
+Pour utiliser la version graphique, il faut installer en plus :
+- PyQt5
 
-2. Activate the conda environment:
+Pour utiliser la version notebook, il faut installer en plus :
+- jupyter
 
-    ```bash
-    conda activate DataMiningProject
-    ```
-
-## Usage
-
-To execute the program, run the `main.py` file as shown below:
-
+Pour installer les librairies, il suffit de lancer la commande suivante :
 ```bash
-python main.py
+pip install -r requirements.txt
 ```
